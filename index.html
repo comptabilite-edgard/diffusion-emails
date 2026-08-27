@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestion des listes de diffusion</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#F5F4EF;color:#1a1a18;min-height:100vh;padding:1.5rem}
+.wrap{max-width:1100px;margin:0 auto}
+.header{background:white;border-radius:12px;border:1px solid #e5e3da;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.logo{font-size:1.1rem;font-weight:600;letter-spacing:1px}.logo .gold{color:#B8982A}
+.badge{background:#FAEEDA;color:#633806;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500}
+.btn-refresh{background:none;border:1px solid #d3d1c7;border-radius:8px;padding:6px 14px;font-size:12px;color:#5F5E5A;cursor:pointer;display:flex;align-items:center;gap:6px}
+.btn-refresh:hover{border-color:#B8982A;color:#B8982A}
+.mode-tabs{display:flex;gap:8px;margin-bottom:1rem}
+.mode-btn{font-size:13px;padding:9px 18px;border-radius:8px;border:1px solid #e5e3da;background:white;cursor:pointer;color:#5F5E5A;font-weight:600}
+.mode-btn.active{background:#1a1a18;color:white;border-color:#1a1a18}
+.tabs{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.tab-btn{font-size:13px;padding:8px 16px;border-radius:8px;border:1px solid #e5e3da;background:white;cursor:pointer;color:#5F5E5A;font-weight:500}
+.tab-btn.active{background:#B8982A;color:white;border-color:#B8982A}
+#btn-sans-magasin.active{background:#A32D2D;color:white;border-color:#A32D2D}
+.card{background:white;border-radius:12px;border:1px solid #e5e3da;padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#888780;margin-bottom:1rem;display:flex;align-items:center;gap:6px;justify-content:space-between}
+.add-row{display:flex;gap:8px;margin-bottom:1rem}
+input[type=email],input[type=text]{flex:1;border:1px solid #d3d1c7;border-radius:8px;padding:8px 10px;font-size:13px}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px}
+.btn-primary{background:#B8982A;color:white}
+.btn-primary:hover{opacity:0.85}
+.email-list{display:flex;flex-direction:column;gap:0}
+.email-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:0.5px solid #f0ede4;font-size:13px;gap:10px}
+.email-row:hover{background:#FAF9F5}
+.email-addr{flex:1}
+.magasin-tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.magasin-tag{background:#E8EEFB;color:#2C4A8C;border-radius:12px;padding:2px 9px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.magasin-tag.aucun{background:#FCEBEB;color:#A32D2D}
+.btn-delete{background:none;border:none;color:#A32D2D;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:14px;flex-shrink:0}
+.btn-delete:hover{background:#FCEBEB}
+.alert{border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px}
+.alert-warn{background:#FAEEDA;color:#633806}.alert-success{background:#EAF3DE;color:#3B6D11}
+.alert-error{background:#FCEBEB;color:#A32D2D}
+#loading{text-align:center;color:#888780;font-size:13px;padding:2rem}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid #e5e3da;border-top-color:#B8982A;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.count{font-size:11.5px;color:#888780;font-weight:500}
+table.admin-table{width:100%;border-collapse:collapse;font-size:13px}
+table.admin-table th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:#888780;padding:8px;border-bottom:2px solid #e5e3da;text-align:left}
+table.admin-table td{padding:8px;border-bottom:0.5px solid #f0ede4;vertical-align:top}
+table.admin-table tr:hover{background:#FAF9F5}
+.mag-name{font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="logo"><span class="gold">EDGARD</span> OPTICIENS</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="badge">Gestion des listes de diffusion</div>
+      <button class="btn-refresh" onclick="chargerDonnees()"><i class="ti ti-refresh"></i> Actualiser</button>
+    </div>
+  </div>
+
+  <div id="alert-zone"></div>
+  <div id="loading"><span class="spinner"></span>Chargement des listes…</div>
+
+  <div id="contenu" style="display:none">
+    <div class="mode-tabs">
+      <button class="mode-btn active" id="mode-campagnes" onclick="changerMode('campagnes')"><i class="ti ti-mail"></i> Campagnes de diffusion</button>
+      <button class="mode-btn" id="mode-admin" onclick="changerMode('admin')"><i class="ti ti-building-store"></i> Flux par magasin (Immos, Dossiers atelier, Dossiers prix zéro…)</button>
+    </div>
+
+    <!-- Vue campagnes -->
+    <div id="vue-campagnes">
+      <div class="tabs" id="tabs"></div>
+      <div class="card">
+        <div class="card-title">
+          <span id="titre-campagne">…</span>
+          <span class="count" id="count-campagne"></span>
+        </div>
+        <div class="add-row">
+          <input type="email" id="input-nouvel-email" placeholder="nouvelle.adresse@groupe-edgard.com">
+          <input type="text" id="input-nouveau-magasin" placeholder="Magasin (optionnel)" style="max-width:180px">
+          <button class="btn btn-primary" onclick="ajouterEmail()"><i class="ti ti-plus"></i> Ajouter</button>
+        </div>
+        <div class="add-row" style="margin-bottom:8px">
+          <input type="text" id="filtre-campagne" placeholder="Filtrer par email ou magasin…" oninput="afficherListe()">
+          <button class="tab-btn" id="btn-sans-magasin" onclick="toggleSansMagasin()" style="white-space:nowrap"><i class="ti ti-alert-triangle"></i> Sans magasin</button>
+          <button class="tab-btn" onclick="trierCampagne('email')" style="white-space:nowrap"><i class="ti ti-sort-ascending-letters"></i> Trier par email</button>
+          <button class="tab-btn" onclick="trierCampagne('magasin')" style="white-space:nowrap"><i class="ti ti-sort-ascending-letters"></i> Trier par magasin</button>
+        </div>
+        <div class="email-list" id="liste-emails"></div>
+      </div>
+    </div>
+
+    <!-- Vue flux admin -->
+    <div id="vue-admin" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <span>Magasin ↔ email utilisé pour Immos, Dossiers atelier, Dossiers prix zéro</span>
+          <span class="count" id="count-admin"></span>
+        </div>
+        <div class="alert alert-warn" style="margin-bottom:0.75rem;flex-direction:column;align-items:flex-start">
+          <div style="display:flex;gap:8px;align-items:flex-start"><i class="ti ti-info-circle" style="margin-top:2px"></i><strong>Cette correspondance magasin ↔ email est utilisée par 3 pages :</strong></div>
+          <ul style="margin:6px 0 0 28px;padding:0;line-height:1.7">
+            <li><a href="https://comptabilite-edgard.github.io/immos/" target="_blank" style="color:#633806">Immobilisations (Immos)</a></li>
+            <li><a href="https://comptabilite-edgard.github.io/dossiers-atelier/" target="_blank" style="color:#633806">Dossiers commandés non facturés</a></li>
+            <li><a href="https://comptabilite-edgard.github.io/dossiers-prix-zero/" target="_blank" style="color:#633806">Dossiers à prix de vente 0€</a></li>
+          </ul>
+        </div>
+        <div class="alert alert-warn" style="margin-bottom:1rem">
+          <i class="ti ti-info-circle"></i>
+          <div>Cette correspondance vient d'une table de données stockée <strong>directement dans n8n</strong> (nommée "Suivi immos 2026", pas une page web) — je n'ai pas de lien à te donner, il faut me demander de la corriger directement.</div>
+        </div>
+        <div class="add-row">
+          <input type="text" id="filtre-admin" placeholder="Filtrer par magasin ou email…" oninput="afficherFluxAdmin()">
+          <button class="tab-btn" onclick="trierAdmin('magasin')" style="white-space:nowrap"><i class="ti ti-sort-ascending-letters"></i> Trier par magasin</button>
+          <button class="tab-btn" onclick="trierAdmin('email')" style="white-space:nowrap"><i class="ti ti-sort-ascending-letters"></i> Trier par email</button>
+        </div>
+        <table class="admin-table">
+          <thead><tr><th>Magasin</th><th>Email(s) associé(s)</th></tr></thead>
+          <tbody id="liste-admin"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DASHBOARD_KEY = 'Tl_TEIXhRBN_G-QuxIp5JsSvdW3pnKkA';
+const CAMPAGNES = [
+  {id:'tiers-payant', label:'Tiers-Payant (1er octobre)'},
+  {id:'anticipation-bilan', label:'Anticipation bilan (23/09)'},
+  {id:'cloture-30sept', label:'Clôture 30/09'}
+];
+let recapData = null;
+let campagneActuelle = 'tiers-payant';
+let modeActuel = 'campagnes';
+
+function chargerDonnees(){
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('contenu').style.display = 'none';
+  document.getElementById('alert-zone').innerHTML = '';
+  fetch('https://edgard-opticiens.app.n8n.cloud/webhook/diffusion-recap-complet?key='+encodeURIComponent(DASHBOARD_KEY))
+    .then(r=>r.json())
+    .then(res=>{
+      if(res.status !== 'ok'){
+        document.getElementById('alert-zone').innerHTML =
+          '<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Accès refusé ou erreur serveur.</div>';
+        document.getElementById('loading').style.display = 'none';
+        return;
+      }
+      recapData = res;
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('contenu').style.display = 'block';
+      afficherOnglets();
+      afficherListe();
+      afficherFluxAdmin();
+    })
+    .catch(e=>{
+      document.getElementById('alert-zone').innerHTML =
+        '<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Erreur réseau : '+e.message+'</div>';
+      document.getElementById('loading').style.display = 'none';
+    });
+}
+
+function changerMode(mode){
+  modeActuel = mode;
+  document.getElementById('mode-campagnes').classList.toggle('active', mode==='campagnes');
+  document.getElementById('mode-admin').classList.toggle('active', mode==='admin');
+  document.getElementById('vue-campagnes').style.display = mode==='campagnes' ? 'block' : 'none';
+  document.getElementById('vue-admin').style.display = mode==='admin' ? 'block' : 'none';
+}
+
+function afficherOnglets(){
+  document.getElementById('tabs').innerHTML = CAMPAGNES.map(c=>{
+    const nb = (recapData.campagnes[c.id]||[]).length;
+    return '<button class="tab-btn '+(c.id===campagneActuelle?'active':'')+'" onclick="changerCampagne(\''+c.id+'\')">'+c.label+' ('+nb+')</button>';
+  }).join('');
+}
+
+function changerCampagne(id){
+  campagneActuelle = id;
+  afficherOnglets();
+  afficherListe();
+}
+
+let sansMagasinActif = false;
+let triCampagne = {champ:'email', sens:1};
+let triAdmin = {champ:'magasin', sens:1};
+
+function toggleSansMagasin(){
+  sansMagasinActif = !sansMagasinActif;
+  document.getElementById('btn-sans-magasin').classList.toggle('active', sansMagasinActif);
+  afficherListe();
+}
+
+function trierCampagne(champ){
+  if(triCampagne.champ === champ) triCampagne.sens *= -1; else { triCampagne.champ = champ; triCampagne.sens = 1; }
+  afficherListe();
+}
+
+function trierAdmin(champ){
+  if(triAdmin.champ === champ) triAdmin.sens *= -1; else { triAdmin.champ = champ; triAdmin.sens = 1; }
+  afficherFluxAdmin();
+}
+
+function afficherListe(){
+  const campagne = CAMPAGNES.find(c=>c.id===campagneActuelle);
+  document.getElementById('titre-campagne').textContent = campagne.label;
+  const filtre = (document.getElementById('filtre-campagne')?.value || '').trim().toLowerCase();
+  let lignes = (recapData.campagnes[campagneActuelle]||[]).slice();
+  if(sansMagasinActif) lignes = lignes.filter(r=>r.magasins.length===0);
+  if(filtre) lignes = lignes.filter(r=>
+    r.email.toLowerCase().includes(filtre) || r.magasins.some(m=>m.toLowerCase().includes(filtre))
+  );
+  lignes.sort((a,b)=>{
+    const va = triCampagne.champ==='email' ? a.email.toLowerCase() : (a.magasins[0]||'zzz').toLowerCase();
+    const vb = triCampagne.champ==='email' ? b.email.toLowerCase() : (b.magasins[0]||'zzz').toLowerCase();
+    return va<vb ? -1*triCampagne.sens : va>vb ? 1*triCampagne.sens : 0;
+  });
+  document.getElementById('count-campagne').textContent = lignes.length+' adresse(s)';
+  document.getElementById('liste-emails').innerHTML = lignes.map(r=>{
+    const tags = r.magasins.length
+      ? r.magasins.map(m=>'<span class="magasin-tag">'+m+'</span>').join('')
+      : '<span class="magasin-tag aucun">Aucun magasin identifié</span>';
+    return '<div class="email-row" id="row-'+r.id+'">'+
+      '<span class="email-addr">'+r.email+'</span>'+
+      '<span class="magasin-tags">'+tags+'</span>'+
+      '<button class="btn-delete" onclick="editerMagasin('+r.id+',\''+(r.magasins[0]||'').replace(/'/g,"\\'")+'\')" title="Modifier le magasin" style="color:#B8982A"><i class="ti ti-pencil"></i></button>'+
+      '<button class="btn-delete" onclick="supprimerEmail('+r.id+',\''+r.email.replace(/'/g,"\\'")+'\')" title="Retirer"><i class="ti ti-trash"></i></button>'+
+    '</div>';
+  }).join('') || '<div style="padding:12px;color:#888780;font-size:12.5px;font-style:italic">Aucune adresse ne correspond.</div>';
+}
+
+function editerMagasin(id, magasinActuel){
+  const row = document.getElementById('row-'+id);
+  if(!row) return;
+  row.innerHTML =
+    '<input type="text" id="edit-magasin-'+id+'" value="'+magasinActuel.replace(/"/g,'&quot;')+'" placeholder="Nom du magasin" style="max-width:200px" onkeydown="if(event.key===\'Enter\')validerMagasin('+id+')">'+
+    '<button class="btn btn-primary" onclick="validerMagasin('+id+')" style="padding:6px 12px"><i class="ti ti-check"></i></button>'+
+    '<button class="btn-delete" onclick="afficherListe()" title="Annuler"><i class="ti ti-x"></i></button>';
+  document.getElementById('edit-magasin-'+id).focus();
+}
+
+function validerMagasin(id){
+  const input = document.getElementById('edit-magasin-'+id);
+  const magasin = input.value.trim();
+  fetch('https://edgard-opticiens.app.n8n.cloud/webhook/diffusion-emails-modifier-magasin',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({key:DASHBOARD_KEY, id:id, magasin:magasin})
+  }).then(r=>r.json()).then(()=>{
+    chargerDonnees();
+  }).catch(e=>{
+    document.getElementById('alert-zone').innerHTML =
+      '<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Erreur réseau : '+e.message+'</div>';
+  });
+}
+
+function afficherFluxAdmin(){
+  const filtre = (document.getElementById('filtre-admin')?.value || '').trim().toLowerCase();
+  let lignes = (recapData.fluxAdmin || []).slice();
+  if(filtre) lignes = lignes.filter(f=>
+    f.magasin.toLowerCase().includes(filtre) || f.emails.some(e=>e.toLowerCase().includes(filtre))
+  );
+  lignes.sort((a,b)=>{
+    const va = triAdmin.champ==='magasin' ? a.magasin.toLowerCase() : (a.emails[0]||'').toLowerCase();
+    const vb = triAdmin.champ==='magasin' ? b.magasin.toLowerCase() : (b.emails[0]||'').toLowerCase();
+    return va<vb ? -1*triAdmin.sens : va>vb ? 1*triAdmin.sens : 0;
+  });
+  document.getElementById('count-admin').textContent = lignes.length+' magasin(s)';
+  document.getElementById('liste-admin').innerHTML = lignes.map(f=>
+    '<tr><td class="mag-name">'+f.magasin+'</td><td>'+f.emails.join(', ')+'</td></tr>'
+  ).join('') || '<tr><td colspan="2" style="color:#888780;font-style:italic">Aucun magasin ne correspond.</td></tr>';
+}
+
+function ajouterEmail(){
+  const input = document.getElementById('input-nouvel-email');
+  const inputMagasin = document.getElementById('input-nouveau-magasin');
+  const email = input.value.trim().toLowerCase();
+  const magasin = inputMagasin.value.trim();
+  document.getElementById('alert-zone').innerHTML = '';
+  if(!email || !email.includes('@')){
+    document.getElementById('alert-zone').innerHTML =
+      '<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i>Merci de saisir une adresse email valide.</div>';
+    return;
+  }
+  const lignesActuelles = recapData.campagnes[campagneActuelle]||[];
+  if(lignesActuelles.some(r=>r.email.toLowerCase()===email)){
+    document.getElementById('alert-zone').innerHTML =
+      '<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i>Cette adresse est déjà dans la liste.</div>';
+    return;
+  }
+  fetch('https://edgard-opticiens.app.n8n.cloud/webhook/diffusion-emails-ajouter',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({key:DASHBOARD_KEY, campagne:campagneActuelle, email:email, magasin:magasin})
+  }).then(r=>r.json()).then(()=>{
+    input.value = '';
+    inputMagasin.value = '';
+    chargerDonnees();
+  }).catch(e=>{
+    document.getElementById('alert-zone').innerHTML =
+      '<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Erreur réseau : '+e.message+'</div>';
+  });
+}
+
+function supprimerEmail(id, email){
+  if(!confirm('Retirer '+email+' de cette liste de diffusion ?')) return;
+  fetch('https://edgard-opticiens.app.n8n.cloud/webhook/diffusion-emails-supprimer',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({key:DASHBOARD_KEY, id:id})
+  }).then(r=>r.json()).then(()=>{
+    chargerDonnees();
+  }).catch(e=>{
+    document.getElementById('alert-zone').innerHTML =
+      '<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Erreur réseau : '+e.message+'</div>';
+  });
+}
+
+chargerDonnees();
+</script>
+</body>
+</html>
