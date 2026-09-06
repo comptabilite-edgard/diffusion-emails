@@ -89,6 +89,12 @@ table.admin-table tr:hover{background:#FAF9F5}
           <button class="tab-btn" onclick="trierCampagne('email')" style="white-space:nowrap"><i class="ti ti-sort-ascending-letters"></i> Trier par email</button>
           <button class="tab-btn" onclick="trierCampagne('magasin')" style="white-space:nowrap"><i class="ti ti-sort-ascending-letters"></i> Trier par magasin</button>
         </div>
+        <div id="zone-envoi-selectif" style="display:none;background:#FAEEDA;border:1px solid #B8982A;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:12.5px;color:#633806"><strong id="nb-selection">0</strong> magasin(s)/adresse(s) sélectionné(s)</span>
+          <button class="tab-btn" onclick="toutSelectionner(true)" style="font-size:11.5px">Tout cocher</button>
+          <button class="tab-btn" onclick="toutSelectionner(false)" style="font-size:11.5px">Tout décocher</button>
+          <button class="btn btn-primary" onclick="envoyerSelection()" style="margin-left:auto;padding:7px 14px;font-size:12.5px"><i class="ti ti-send"></i> Envoyer à la sélection</button>
+        </div>
         <div class="email-list" id="liste-emails"></div>
       </div>
     </div>
@@ -220,17 +226,61 @@ function afficherListe(){
     return va<vb ? -1*triCampagne.sens : va>vb ? 1*triCampagne.sens : 0;
   });
   document.getElementById('count-campagne').textContent = lignes.length+' adresse(s)';
+  const selectionActive = campagneActuelle === 'anticipation-bilan';
+  document.getElementById('zone-envoi-selectif').style.display = selectionActive ? 'flex' : 'none';
   document.getElementById('liste-emails').innerHTML = lignes.map(r=>{
     const tags = r.magasins.length
       ? r.magasins.map(m=>'<span class="magasin-tag">'+m+'</span>').join('')
       : '<span class="magasin-tag aucun">Aucun magasin identifié</span>';
+    const checkbox = selectionActive
+      ? '<input type="checkbox" class="check-selection" data-email="'+r.email.replace(/"/g,'&quot;')+'" onchange="majCompteurSelection()" style="width:16px;height:16px;margin-right:4px;cursor:pointer">'
+      : '';
     return '<div class="email-row" id="row-'+r.id+'">'+
+      checkbox+
       '<span class="email-addr">'+r.email+'</span>'+
       '<span class="magasin-tags">'+tags+'</span>'+
       '<button class="btn-delete" onclick="editerMagasin('+r.id+',\''+(r.magasins[0]||'').replace(/'/g,"\\'")+'\')" title="Modifier le magasin" style="color:#B8982A"><i class="ti ti-pencil"></i></button>'+
       '<button class="btn-delete" onclick="supprimerEmail('+r.id+',\''+r.email.replace(/'/g,"\\'")+'\')" title="Retirer"><i class="ti ti-trash"></i></button>'+
     '</div>';
   }).join('') || '<div style="padding:12px;color:#888780;font-size:12.5px;font-style:italic">Aucune adresse ne correspond.</div>';
+  if(selectionActive) majCompteurSelection();
+}
+
+function majCompteurSelection(){
+  const n = document.querySelectorAll('.check-selection:checked').length;
+  const el = document.getElementById('nb-selection');
+  if(el) el.textContent = n;
+}
+
+function toutSelectionner(val){
+  document.querySelectorAll('.check-selection').forEach(cb=>cb.checked=val);
+  majCompteurSelection();
+}
+
+function envoyerSelection(){
+  const emails = Array.from(document.querySelectorAll('.check-selection:checked')).map(cb=>cb.dataset.email);
+  if(!emails.length){
+    document.getElementById('alert-zone').innerHTML =
+      '<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i>Sélectionnez au moins un magasin avant d\'envoyer.</div>';
+    return;
+  }
+  if(!confirm('Envoyer le mail "Anticipation bilan" à '+emails.length+' adresse(s) sélectionnée(s) ?')) return;
+  fetch('https://edgard-opticiens.app.n8n.cloud/webhook/anticipation-bilan-envoi-selectif',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({key:DASHBOARD_KEY, emails:emails.join(',')})
+  }).then(r=>r.json()).then(res=>{
+    if(res.status==='ok'){
+      document.getElementById('alert-zone').innerHTML =
+        '<div class="alert alert-success"><i class="ti ti-check"></i>Mail envoyé à '+emails.length+' adresse(s).</div>';
+    }else{
+      document.getElementById('alert-zone').innerHTML =
+        '<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Erreur : '+(res.message||'inconnue')+'</div>';
+    }
+  }).catch(e=>{
+    document.getElementById('alert-zone').innerHTML =
+      '<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Erreur réseau : '+e.message+'</div>';
+  });
 }
 
 function editerMagasin(id, magasinActuel){
